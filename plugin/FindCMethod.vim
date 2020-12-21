@@ -43,7 +43,8 @@ function! s:RefHandler(conn_id, response) abort
         call add(l:matches, {
           \ 'filename': l:filename,
           \ 'line': l:match_line,
-          \ 'col': l:match_col
+          \ 'col': l:match_col,
+          \ 'content': l:contents[l:range.end.line]
           \ })
       endif
     endfor
@@ -52,12 +53,37 @@ function! s:RefHandler(conn_id, response) abort
   " Handle results
   if empty(l:matches)
     echomsg 'No references found'
-  elseif len(l:matches) > 1
-    " Ambiguous. Ideally should prompt the user to pick which definition to go to
-    echomsg l:matches
-  else
-    echomsg l:matches[0]
+    return
   endif
+
+  let l:select = 0
+  if len(l:matches) > 1
+    " A quick and dirty solution and it sucks, but it's working.
+    let l:idx = 0
+    let l:prompt = ''
+    for l:match in l:matches
+      let l:idx += 1
+      let l:prompt .=
+        \ l:idx . ') ' .
+        \ l:match.filename . ':' . l:match.line . ':' . l:match.col . "\n" .
+        \ l:match.content . "\n"
+    endfor
+    let l:prompt .= 'Pick symbol: '
+
+    let l:res = input(l:prompt)
+    if l:res ==# ''
+      return
+    elseif l:res < 1 || l:res > len(l:matches)
+      echomsg 'Out of bounds'
+    else
+      let l:select = l:res - 1
+    endif
+  endif
+
+  let l:selected = l:matches[l:select]
+  execute 'edit ' . fnameescape(l:selected.filename)
+  call cursor(l:selected.line + 1, l:selected.col + 1)
+  ALEGoToDefinition
 endfunction
 
 function! s:RefOnReady(line, column, options, linter, lsp_details) abort
