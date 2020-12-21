@@ -39,6 +39,7 @@ function! s:ReferenceHandler(conn_id, response) abort
       if l:match != -1
         let l:match_line = l:range.end.line
         let l:match_col = l:range.end.character + l:match
+        " echomsg l:line[l:match:] " Uncomment to print the actual match
         call add(l:matches, {
           \ 'filename': l:filename,
           \ 'line': l:match_line,
@@ -52,7 +53,7 @@ function! s:ReferenceHandler(conn_id, response) abort
   if empty(l:matches)
     echomsg 'No references found'
   elseif len(l:matches) > 1
-    echomsg 'Ambiguous'
+    " Ambiguous. Ideally should prompt the user to pick which definition to go to
     echomsg l:matches
   else
     echomsg l:matches[0]
