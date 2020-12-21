@@ -1,11 +1,11 @@
-let s:request_ids = []
+let s:ref_request_ids = []
 
-function! s:ReferenceHandler(conn_id, response) abort
+function! s:RefHandler(conn_id, response) abort
   " Validate response
   if !has_key(a:response, 'id') | return | endif
-  let l:idx = index(s:request_ids, a:response.id)
+  let l:idx = index(s:ref_request_ids, a:response.id)
   if l:idx == -1 | return | endif
-  call remove(s:request_ids, l:idx)
+  call remove(s:ref_request_ids, l:idx)
 
   let l:result = get(a:response, 'result', [])
 
@@ -60,25 +60,25 @@ function! s:ReferenceHandler(conn_id, response) abort
   endif
 endfunction
 
-function! s:OnReady(line, column, options, linter, lsp_details) abort
+function! s:RefOnReady(line, column, options, linter, lsp_details) abort
   let l:id = a:lsp_details.connection_id
   if !ale#lsp#HasCapability(l:id, 'references') | return | endif
   let l:buffer = a:lsp_details.buffer
-  let l:Callback = function('s:ReferenceHandler')
+  let l:Callback = function('s:RefHandler')
   call ale#lsp#RegisterCallback(l:id, l:Callback)
   " Send a message saying the buffer has changed first, or the
   " references position probably won't make sense.
   call ale#lsp#NotifyForChanges(l:id, l:buffer)
   let l:message = ale#lsp#message#References(l:buffer, a:line, a:column)
   let l:request_id = ale#lsp#Send(l:id, l:message)
-  call add(s:request_ids, l:request_id)
+  call add(s:ref_request_ids, l:request_id)
 endfunction
 
 function! s:FindCMethod(...) abort
   let l:buffer = bufnr('')
   let [l:line, l:column] = getpos('.')[1:2]
   let l:column = min([l:column, len(getline(l:line))])
-  let l:Callback = function('s:OnReady', [l:line, l:column, {}])
+  let l:Callback = function('s:RefOnReady', [l:line, l:column, {}])
 
   for l:linter in ale#linter#Get(&filetype)
     if !empty(l:linter.lsp)
